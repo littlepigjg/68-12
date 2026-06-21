@@ -61,7 +61,7 @@ class EventHandlers {
     }
 
     bindParamSliders() {
-        const params = ['fontSize', 'charSpacing', 'lineHeight', 'slantAngle', 'inkDensity', 'randomOffset', 'strokeNoise', 'pageWidth', 'pageHeight', 'padding'];
+        const params = ['fontSize', 'charSpacing', 'lineHeight', 'slantAngle', 'inkDensity', 'randomOffset', 'rhythmIntensity', 'strokeNoise', 'pageWidth', 'pageHeight', 'padding'];
         
         params.forEach(param => {
             const input = document.getElementById(param);
@@ -229,6 +229,7 @@ class EventHandlers {
                 break;
             case 'inkDensity':
             case 'strokeNoise':
+            case 'rhythmIntensity':
                 valueDisplay.textContent = value + '%';
                 break;
             default:
@@ -249,6 +250,7 @@ class EventHandlers {
             slantAngle: 'slantAngle',
             inkDensity: 'inkDensity',
             randomOffset: 'randomOffset',
+            rhythmIntensity: 'rhythmIntensity',
             strokeNoise: 'strokeNoise'
         };
         

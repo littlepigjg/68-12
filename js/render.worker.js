@@ -48,8 +48,8 @@ class RenderWorker {
     }
 
     splitTextIntoLines(text, maxWidth, options) {
-        const { fontSize, fontFamily, weight, charSpacing, seed } = options;
-        const cacheKey = `${text}_${maxWidth}_${fontFamily}_${fontSize}_${charSpacing}_${weight}_${seed}`;
+        const { fontSize, fontFamily, weight, charSpacing, seed, rhythmIntensity } = options;
+        const cacheKey = `${text}_${maxWidth}_${fontFamily}_${fontSize}_${charSpacing}_${weight}_${seed}_${rhythmIntensity}`;
         
         if (this._textLinesCache && this._cacheKey === cacheKey) {
             return this._textLinesCache;
@@ -60,6 +60,8 @@ class RenderWorker {
         
         const paragraphs = text.split('\n');
         const lines = [];
+        const effectiveRhythm = rhythmIntensity !== undefined ? rhythmIntensity : 0;
+        const estSpacingFactor = 1 + (effectiveRhythm / 100) * 1.2;
         
         ctx.font = `${weight} ${fontSize}px ${fontFamily}`;
         
@@ -74,7 +76,8 @@ class RenderWorker {
             
             for (let i = 0; i < paragraph.length; i++) {
                 const char = paragraph[i];
-                const charWidth = ctx.measureText(char).width + charSpacing;
+                const estSpacing = charSpacing * estSpacingFactor;
+                const charWidth = ctx.measureText(char).width + estSpacing;
                 
                 if (currentWidth + charWidth > maxWidth && currentLine !== '') {
                     lines.push(currentLine);
@@ -121,7 +124,7 @@ class RenderWorker {
     renderPageToCanvas(pageLines, pageIndex, options) {
         const { pageWidth, pageHeight, padding, fontSize, lineHeight, charSpacing,
                 paperColor, inkColor, fontFamily, weight, slantAngle, inkDensity,
-                randomOffset, strokeNoise, seed } = options;
+                randomOffset, strokeNoise, seed, rhythmIntensity } = options;
         
         const canvas = new OffscreenCanvas(pageWidth, pageHeight);
         const ctx = canvas.getContext('2d');
@@ -133,21 +136,33 @@ class RenderWorker {
         const startY = padding;
         
         let charIndexOffset = 0;
+        let globalCharCount = 0;
         
         ctx.font = `${weight} ${fontSize}px ${fontFamily}`;
+        const effectiveRhythm = rhythmIntensity !== undefined ? rhythmIntensity : 0;
         
         for (let lineIndex = 0; lineIndex < pageLines.length; lineIndex++) {
             const line = pageLines[lineIndex];
+            const lineLength = line.length;
             const y = startY + lineIndex * lineHeightPx;
             let x = padding;
+            let prevRhythmState = null;
             
-            for (let charIndex = 0; charIndex < line.length; charIndex++) {
-                const char = line[charIndex];
-                const globalCharIndex = charIndexOffset + charIndex;
+            for (let lineCharIndex = 0; lineCharIndex < lineLength; lineCharIndex++) {
+                const char = line[lineCharIndex];
+                const globalCharIndex = charIndexOffset + lineCharIndex;
                 
-                TextEffects.drawChar(ctx, char, x, y, {
+                const dynamicSpacing = TextEffects.computeRhythmSpacing(
+                    char, globalCharIndex, lineCharIndex, lineLength,
+                    globalCharIndex, seed, charSpacing, effectiveRhythm
+                );
+                
+                const rhythmState = TextEffects.drawChar(ctx, char, x, y, {
                     charIndex: globalCharIndex,
                     lineIndex,
+                    lineCharIndex,
+                    lineLength,
+                    globalCharIndex,
                     seed,
                     fontSize,
                     fontFamily,
@@ -156,11 +171,15 @@ class RenderWorker {
                     inkColor,
                     inkDensity,
                     randomOffset,
-                    strokeNoise
+                    strokeNoise,
+                    rhythmIntensity: effectiveRhythm,
+                    prevRhythmState
                 });
                 
-                const charWidth = ctx.measureText(char).width + charSpacing;
+                prevRhythmState = rhythmState;
+                const charWidth = ctx.measureText(char).width + dynamicSpacing;
                 x += charWidth;
+                globalCharCount++;
             }
             
             charIndexOffset += line.length;

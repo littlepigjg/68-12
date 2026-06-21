@@ -9,6 +9,7 @@ const HandwritingStyles = {
         inkDensity: 80,
         randomOffset: 2,
         strokeNoise: 20,
+        rhythmIntensity: 30,
         weight: 'normal',
         description: '工整规范，端庄秀丽'
     },
@@ -23,6 +24,7 @@ const HandwritingStyles = {
         inkDensity: 75,
         randomOffset: 4,
         strokeNoise: 35,
+        rhythmIntensity: 60,
         weight: 'normal',
         description: '行云流水，自然流畅'
     },
@@ -37,6 +39,7 @@ const HandwritingStyles = {
         inkDensity: 70,
         randomOffset: 6,
         strokeNoise: 50,
+        rhythmIntensity: 85,
         weight: 'normal',
         description: '笔走龙蛇，气势磅礴'
     },
@@ -51,6 +54,7 @@ const HandwritingStyles = {
         inkDensity: 85,
         randomOffset: 1,
         strokeNoise: 15,
+        rhythmIntensity: 25,
         weight: '300',
         description: '瘦挺爽利，铁画银钩'
     },
@@ -65,6 +69,7 @@ const HandwritingStyles = {
         inkDensity: 80,
         randomOffset: 3,
         strokeNoise: 30,
+        rhythmIntensity: 50,
         weight: 'normal',
         description: '使用自定义字体'
     }

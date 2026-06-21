@@ -17,7 +17,8 @@ class HandwritingRenderer {
             padding: 60,
             paperColor: '#faf8f0',
             inkColor: '#2c2c2c',
-            weight: 'normal'
+            weight: 'normal',
+            rhythmIntensity: 50
         };
         this.pages = [];
         this.currentPage = 0;
@@ -43,7 +44,7 @@ class HandwritingRenderer {
     }
 
     splitTextIntoLines(text, maxWidth, ctx) {
-        const cacheKey = `${text}_${maxWidth}_${this.options.fontFamily}_${this.options.fontSize}_${this.options.charSpacing}_${this.options.weight}`;
+        const cacheKey = `${text}_${maxWidth}_${this.options.fontFamily}_${this.options.fontSize}_${this.options.charSpacing}_${this.options.weight}_${this.options.rhythmIntensity}_${this.seed}`;
         
         if (this._textLinesCache && this._cacheKey === cacheKey) {
             return this._textLinesCache;
@@ -51,6 +52,8 @@ class HandwritingRenderer {
         
         const paragraphs = text.split('\n');
         const lines = [];
+        const rhythmIntensity = this.options.rhythmIntensity || 0;
+        const estSpacingFactor = 1 + (rhythmIntensity / 100) * 1.2;
         
         ctx.font = `${this.options.weight} ${this.options.fontSize}px ${this.options.fontFamily}`;
         
@@ -65,7 +68,8 @@ class HandwritingRenderer {
             
             for (let i = 0; i < paragraph.length; i++) {
                 const char = paragraph[i];
-                const charWidth = ctx.measureText(char).width + this.options.charSpacing;
+                const estSpacing = this.options.charSpacing * estSpacingFactor;
+                const charWidth = ctx.measureText(char).width + estSpacing;
                 
                 if (currentWidth + charWidth > maxWidth && currentLine !== '') {
                     lines.push(currentLine);
@@ -115,7 +119,7 @@ class HandwritingRenderer {
     renderPage(pageIndex) {
         const { pageWidth, pageHeight, padding, fontSize, lineHeight, charSpacing,
                 paperColor, inkColor, fontFamily, weight, slantAngle, inkDensity,
-                randomOffset, strokeNoise } = this.options;
+                randomOffset, strokeNoise, rhythmIntensity } = this.options;
         
         this.canvas.width = pageWidth;
         this.canvas.height = pageHeight;
@@ -144,19 +148,30 @@ class HandwritingRenderer {
         
         let charCount = 0;
         ctx.font = `${weight} ${fontSize}px ${fontFamily}`;
+        const effectiveRhythm = rhythmIntensity !== undefined ? rhythmIntensity : 0;
         
         for (let lineIndex = 0; lineIndex < pageLines.length; lineIndex++) {
             const line = pageLines[lineIndex];
+            const lineLength = line.length;
             const y = startY + lineIndex * lineHeightPx;
             let x = padding;
+            let prevRhythmState = null;
             
-            for (let charIndex = 0; charIndex < line.length; charIndex++) {
-                const char = line[charIndex];
+            for (let lineCharIndex = 0; lineCharIndex < lineLength; lineCharIndex++) {
+                const char = line[lineCharIndex];
                 const globalCharIndex = charIndexOffset + charCount;
                 
-                TextEffects.drawChar(ctx, char, x, y, {
+                const dynamicSpacing = TextEffects.computeRhythmSpacing(
+                    char, globalCharIndex, lineCharIndex, lineLength,
+                    globalCharIndex, this.seed, charSpacing, effectiveRhythm
+                );
+                
+                const rhythmState = TextEffects.drawChar(ctx, char, x, y, {
                     charIndex: globalCharIndex,
                     lineIndex,
+                    lineCharIndex,
+                    lineLength,
+                    globalCharIndex,
                     seed: this.seed,
                     fontSize,
                     fontFamily,
@@ -165,10 +180,13 @@ class HandwritingRenderer {
                     inkColor,
                     inkDensity,
                     randomOffset,
-                    strokeNoise
+                    strokeNoise,
+                    rhythmIntensity: effectiveRhythm,
+                    prevRhythmState
                 });
                 
-                const charWidth = ctx.measureText(char).width + charSpacing;
+                prevRhythmState = rhythmState;
+                const charWidth = ctx.measureText(char).width + dynamicSpacing;
                 x += charWidth;
                 charCount++;
             }
